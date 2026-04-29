@@ -1,101 +1,161 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import Link from "next/link";
+import { motion } from "framer-motion";
+import {
+  ArrowRight,
+  Cpu,
+  Eye,
+  GitBranch,
+  Globe2,
+  Network,
+  ShieldCheck,
+  Zap,
+} from "lucide-react";
+import { PipelineViz } from "@/components/dashboard/pipeline-viz";
+import { FeedCards, FeedSummary } from "@/components/dashboard/feed-cards";
+import { Panel } from "@/components/ui/panel";
+import { usePipeline } from "@/lib/pipeline-context";
+import { getModelMeta } from "@/lib/models";
+
+const STATS = [
+  { label: "Threats Tracked (24h)", value: "1,284", trend: "+12%", icon: Eye },
+  { label: "Avg. Time to Report", value: "8m 42s", trend: "-31%", icon: Zap },
+  { label: "Active Threat Actors", value: "47", trend: "+3", icon: Network },
+  { label: "RAG Knowledge Records", value: "2,917", trend: "+62", icon: GitBranch },
+];
+
+export default function DashboardPage() {
+  const { cycleNumber, ingestedData } = usePipeline();
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div>
+      <div className="border-b border-border bg-bg-surface/50 grid-bg">
+        <div className="px-8 py-8 max-w-[1600px] mx-auto">
+          <div className="flex items-start justify-between gap-6 flex-wrap">
+            <div>
+              <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-text-muted mb-2">
+                <ShieldCheck className="size-3 text-accent-green" />
+                <span>Pipeline Status</span>
+                <span className="font-mono text-accent-green">OPERATIONAL</span>
+                <span className="text-text-muted">·</span>
+                <span className="font-mono text-text-secondary">CYCLE #{String(cycleNumber).padStart(4, "0")}</span>
+              </div>
+              <h2 className="text-3xl font-semibold tracking-tight text-text-primary">
+                AI-Augmented Threat Intelligence Pipeline
+              </h2>
+              <p className="mt-2 text-sm text-text-secondary max-w-2xl">
+                ARGUS converts raw threat data into governed, organization-aware intelligence products.
+                Six stages, continuous feedback, full analyst-in-the-loop control.
+              </p>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <Link
+                href={ingestedData ? "/enrich" : "/context"}
+                className="btn-primary"
+              >
+                {ingestedData ? "Continue Active Cycle" : "Start New Analysis"}
+                <ArrowRight className="size-4" />
+              </Link>
+              <FeedSummary />
+            </div>
+          </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {STATS.map((s, i) => (
+              <motion.div
+                key={s.label}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="panel p-4"
+              >
+                <div className="flex items-start justify-between">
+                  <s.icon className="size-4 text-text-secondary" />
+                  <span className="text-[11px] font-mono text-accent-green">{s.trend}</span>
+                </div>
+                <div className="mt-3 text-2xl font-semibold text-text-primary">{s.value}</div>
+                <div className="mt-0.5 text-[11px] uppercase tracking-widest text-text-muted">
+                  {s.label}
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+      </div>
+
+      <div className="px-8 py-8 max-w-[1600px] mx-auto space-y-6">
+        <Panel
+          title="Pipeline Topology"
+          subtitle="Six-stage processing chain with continuous feedback loop"
+          actions={<DashboardModelBadge />}
         >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          <PipelineViz />
+        </Panel>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Panel
+            title="Threat Feeds"
+            subtitle="Real-time integration status"
+            className="lg:col-span-2"
+            actions={<FeedSummary />}
+          >
+            <FeedCards />
+          </Panel>
+
+          <Panel title="Coverage" subtitle="Current intelligence surface">
+            <ul className="divide-y divide-border">
+              <CoverageRow
+                label="MITRE ATT&CK Techniques"
+                value="201 of 229"
+                detail="mapped (88%)"
+              />
+              <CoverageRow
+                label="CVE Coverage (last 30d)"
+                value="1,247"
+                detail="vulnerabilities tracked"
+              />
+              <CoverageRow
+                label="Sector-Specific IoCs"
+                value="4,891"
+                detail="indicators"
+              />
+              <CoverageRow
+                label="Regulatory Mapping"
+                value="6"
+                detail="frameworks configured"
+              />
+            </ul>
+            <div className="mt-4 pt-4 border-t border-border flex items-center gap-2 text-xs text-text-muted">
+              <Globe2 className="size-3.5" />
+              <span>14 regions · 6 ISACs · 32 countries</span>
+            </div>
+          </Panel>
+        </div>
+      </div>
     </div>
+  );
+}
+
+function DashboardModelBadge() {
+  const { selectedModel } = usePipeline();
+  const meta = getModelMeta(selectedModel);
+  return (
+    <span className="badge-cyan">
+      <Cpu className="size-3" />
+      <span className={`size-1.5 rounded-full ${meta.dot}`} />
+      {meta.label} · model-agnostic via OpenRouter
+    </span>
+  );
+}
+
+function CoverageRow({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <li className="flex items-baseline justify-between gap-2 py-2.5">
+      <span className="text-xs text-text-secondary">{label}</span>
+      <span className="text-right">
+        <span className="font-mono text-text-primary text-sm font-semibold">{value}</span>
+        <span className="ml-1 text-[11px] text-text-muted">{detail}</span>
+      </span>
+    </li>
   );
 }

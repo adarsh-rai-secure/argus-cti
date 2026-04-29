@@ -27,6 +27,15 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env
+
+# loose source assets (duplicated under public/ and src/app/)
+/whitetransparent*.png
+
+# IDE / OS
+.vscode/
+.idea/
+Thumbs.db
 
 # vercel
 .vercel
