@@ -199,7 +199,7 @@ This project is part of academic research at Carnegie Mellon University. All rig
 
 ## Acknowledgments
 
-- Dr. Patrick Scanlon — Thesis Advisor, Carnegie Mellon University
+- Dr. Thomas.P. Scanlon — Thesis Advisor, Carnegie Mellon University
 - SEI Cyber Intelligence Tradecraft Report (2019) — Framework foundation
 - MITRE ATT&CK® — Technique taxonomy
 - OpenRouter — Multi-model LLM routing
