@@ -1,213 +1,162 @@
-# ARGUS — AI-Enabled Threat Intelligence Reporting
+# Argus CTI
 
-<div align="center">
+[![License](https://img.shields.io/badge/license-Academic_Research-blue.svg)](#license)
+[![Next.js 14](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed-Vercel-black?logo=vercel)](https://argus-cti.vercel.app)
+[![OpenRouter](https://img.shields.io/badge/LLM_Gateway-OpenRouter-6366f1)](https://openrouter.ai/)
 
-**A reporting-centered reference architecture for AI-enabled cyber threat intelligence.**
+Single-agent system with tool calling that ingests OSINT feeds, enriches with MITRE ATT&CK mappings via an ETL pipeline, and generates tailored intelligence products for three audiences. Built as a CMU thesis project at the Software Engineering Institute. Model-agnostic generation across 8 LLMs via OpenRouter. Human-AI teaming scored 91/100 on tradecraft compliance, cutting report production from 205 minutes to 35.
 
-Built as part of a Carnegie Mellon University Master's thesis at the Heinz College of Information Systems and Public Policy.
+[Live Demo](https://argus-cti.vercel.app) · [Research Paper](https://drive.google.com/file/d/15vLA_pAFm88RTSFJSCMEhoTcF9wtPT9S/view?usp=sharing) · [Thesis Defense](https://youtu.be/NFk96HkcDRo?si=ZUPRY0ci3hTs2dt0) · [Portfolio](https://adarsh-rai.com)
 
-[Live Demo](https://argus-cti.vercel.app) · [Research Paper](#research) · [Architecture](#architecture)
+![Argus CTI dashboard with six-stage pipeline topology, status tiles, feed sources, and model selector](docs/images/dashboard1.png)
 
-</div>
+## The Problem
 
----
+AI research in CTI clusters around data collection and threat analysis. 41 of 54 papers reviewed for this thesis addressed those upstream phases. Only 5 addressed reporting, feedback, or human-machine teaming with implemented tooling. Argus treats intelligence product generation as the primary design target, not a byproduct of extraction.
 
-## Overview
+## Pipeline
 
-ARGUS is a working prototype that implements a six-stage, reporting-centered CTI pipeline. It addresses a gap identified through a systematic literature review of 54 papers: while AI capabilities for data gathering and threat analysis are mature, the field lacks architectures that treat **intelligence product generation** as a primary design target with organizational context, analyst review, and structured feedback loops.
+Six stages run as a single-agent system with tool calling. State lives in a React context; there is no database.
 
-The system ingests raw threat data from multiple sources, enriches it with ATT&CK mappings and threat actor attribution, contextualizes it against an organization's specific sector, assets, and regulatory environment, and generates three classes of intelligence products — each tailored for a different audience — from the same evidence base.
+| Stage | Route | What happens |
+|---|---|---|
+| 01 Context | `/context` | Analyst configures org profile: sector, regulatory frameworks, critical assets, intelligence priorities |
+| 02 Ingest | `/ingest` | Raw threat data enters via search query, file upload, or cached demo. LLM structures it into a normalized threat record |
+| 03 Enrich | `/enrich` | ATT&CK technique mapping, kill chain phasing, actor profiling, asset cross-referencing, confidence scoring |
+| 04 Generate | `/generate` | LLM produces draft intelligence reports in three formats: operational (TLP:RED), strategic (TLP:AMBER+STRICT), external sharing (TLP:GREEN) |
+| 05 Review | `/review` | Chat-based analyst refinement with tracked edits. Approval with analyst sign-off required |
+| 06 Feedback | `/feedback` | Analyst rates the cycle, logs adjustments. Feedback injected into next cycle's generation prompt |
 
-### Key Capabilities
+![Stage 1 organization profile: sector, industry, and regulatory framework selection](docs/images/context1.png)
 
-- **Multi-source ingestion** — Search any threat, CVE, or actor by name. Upload PDFs or Excel files. Load pre-built scenarios. Simulated integrations with MISP, CISA KEV, AlienVault OTX, NVD, and internal SIEM.
-- **Organizational context layer** — Sector, regulatory frameworks (NIST RMF, PCI DSS, HIPAA, SOX, FERPA, CMMC, GDPR, SOC 2, ISO 27001), critical asset types, and intelligence priorities drive report prioritization and compliance mapping.
-- **Three intelligence product classes** from the same evidence base:
-  - **Operational/Tactical Brief** (TLP:RED) — For SOC analysts, incident responders, threat hunters
-  - **Strategic Brief** (TLP:AMBER+STRICT) — For CISO, executive leadership, board
-  - **External Sharing Product** (TLP:GREEN) — Anonymized for ISACs and peer organizations
-- **Model-agnostic generation** — Switch between LLM providers (DeepSeek, Gemini, Llama, GPT-4o, Claude) via OpenRouter. The architecture is provider-independent by design.
-- **Analyst review with natural-language editing** — Chat-based interface for refining reports. The analyst remains a co-equal partner in intelligence production.
-- **Approval workflow** — Named sign-off with consent logging for audit trails.
-- **Feedback capture** — Star ratings, edit metrics, and free-text feedback flow back into the next generation cycle, closing the intelligence lifecycle loop.
+![Stage 2 ingest view structuring the TeamPCP/LiteLLM scenario into a normalized threat record](docs/images/ingest1.png)
 
----
+![Stage 3 enrichment showing aggregated confidence, kill chain phases, and threat actor attribution](docs/images/enrichment1.png)
 
-## Architecture
+![Stage 4 generation surfacing three product cards: TLP:RED Operational, TLP:AMBER+STRICT Strategic, TLP:GREEN External Sharing](docs/images/Generation1.png)
 
-The system implements a six-stage pipeline based on the SEI Cyber Intelligence Framework, targeting the phases with the weakest AI coverage and highest operational consequence:
+The same evidence base produces three different reports:
 
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│ 01 Context  │───▶│ 02 Ingest   │───▶│ 03 Enrich   │
-│ Org Profile │    │ Data Sources│    │ ATT&CK Map  │
-└─────────────┘    └─────────────┘    └──────┬──────┘
-                                             │
-                   ┌─────────────────────────┘
-                   ▼
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│ 06 Feedback │◀───│ 05 Review   │◀───│ 04 Generate │
-│ Quality Loop│    │ Analyst HMT │    │ 3 Products  │
-└──────┬──────┘    └─────────────┘    └─────────────┘
-       │
-       └──────────────── Continuous Learning Loop ─────────────────▶ 01
-```
+- **Operational/Tactical Brief (TLP:RED).** For SOC analysts and incident responders. IOCs, ATT&CK mappings, affected assets from the org's inventory, P1/P2/P3 recommended actions with time windows.
+- **Strategic Brief (TLP:AMBER+STRICT).** For CISO and board. BLUF executive summary, quantified business impact, compliance implications, decision points framed as questions.
+- **External Sharing Product (TLP:GREEN).** For ISACs and peer orgs. All org identifiers stripped. STIX/MISP-compatible structure.
 
-### Design Constraints
+![Stage 5 analyst review with rendered operational report on the left and natural-language edit chat on the right](docs/images/review1.png)
 
-1. **Reporting as primary target** — Intelligence product generation is the design goal, not a byproduct of extraction.
-2. **Technical feasibility** — All components use existing tools and documented methods.
-3. **Analyst as co-equal partner** — The human remains in the loop for review, editing, and approval.
-
----
+![Stage 6 feedback capture with star rating, evaluation dimensions, and adjustment checkboxes injected into the next cycle](docs/images/feedback1.png)
 
 ## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| Frontend | Next.js 14 (App Router), React, TypeScript |
-| Styling | Tailwind CSS, Framer Motion |
-| LLM Routing | OpenRouter (multi-model) |
-| Models | DeepSeek V3, Gemini 2.0/2.5 Flash, Llama 4 Maverick/Scout, GPT-4o, Claude Sonnet |
-| Deployment | Vercel |
-| Report Rendering | react-markdown |
+|---|---|
+| Framework | Next.js 14 (App Router) |
+| Language | TypeScript 5 (strict mode) |
+| Frontend | React 18, Tailwind CSS 3.4, Framer Motion |
+| Report rendering | react-markdown |
+| LLM gateway | OpenRouter API |
+| Selectable models | DeepSeek V3, Gemini 2.0/2.5 Flash, Llama 4 Maverick/Scout, GPT-4o, Claude Sonnet |
+| State | React Context (no database, all state in browser memory) |
+| Hosting | Vercel |
+| Data storage | AWS S3 (feed data) |
 
----
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- An [OpenRouter](https://openrouter.ai) API key (free tier available)
-
-### Installation
+## Quick Start
 
 ```bash
-git clone https://github.com/<your-username>/argus-cti.git
+git clone https://github.com/adarsh-rai-secure/argus-cti.git
 cd argus-cti
 npm install
-```
-
-### Environment Variables
-
-Create a `.env.local` file in the project root:
-
-```env
-OPENROUTER_API_KEY=your_openrouter_api_key_here
-```
-
-### Development
-
-```bash
+echo "OPENROUTER_API_KEY=sk-or-v1-..." > .env.local
 npm run dev
+# Open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+One env var: `OPENROUTER_API_KEY`. Free-tier models (DeepSeek V3, Gemini Flash, Llama 4) work without payment.
 
-### Deployment
-
-Deploy to Vercel:
-
-```bash
-vercel --prod
-```
-
-Set the `OPENROUTER_API_KEY` environment variable in your Vercel project settings under **Settings → Environment Variables**.
-
----
+**Quick Demo (no API key needed).** Press "Quick Demo" in the header. The full pipeline loads against the TeamPCP/LiteLLM scenario with pre-generated reports. No API calls.
 
 ## Demo Scenario
 
-The application ships with a pre-built scenario based on the **TeamPCP/LiteLLM supply chain attack** (March 24, 2026) — a real, multi-ecosystem supply chain campaign that compromised a widely-used AI proxy library through a cascading attack originating from the Trivy security scanner. The scenario includes:
+The cached demo uses a real-world-inspired scenario: TeamPCP / LiteLLM supply chain compromise (March 24, 2026). The org profile is a financial services firm modeled on Visa with PCI-DSS, NIST RMF, SOX, GDPR, and SOC 2 obligations. The bundle includes 10 ATT&CK techniques, CVE-2026-33634, 4 IOC categories, and a 10-asset inventory.
 
-- Pre-loaded threat data with 10 ATT&CK technique mappings
-- Simulated asset inventory with 10 organizational assets
-- IOCs, kill chain analysis, and threat actor attribution
-- Cached high-quality reports for all three product classes
-- Compliance mapping across PCI DSS, NIST RMF, SOX, and GDPR
+## Evaluation
 
-Use the **Quick Demo** button on any stage to load pre-built content instantly.
+Seven-metric framework comparing AI-only, human-only, and human+AI conditions:
 
----
+| Metric | AI Only | Human Only | Human + AI |
+|---|---|---|---|
+| Answer Relevance (1-5) | 3.2 | 4.1 | 4.5 |
+| Context Relevance (%) | 71 | 89 | 85 |
+| Groundedness (%) | 62 | 94 | 88 |
+| Edit Distance (%) | N/A | N/A | 34 |
+| Product Usefulness (1-5) | 2.4 | 3.8 | 4.3 |
+| Tradecraft Compliance (0-100) | 38 | 82 | 91 |
+| Production Time (min) | 4 | 95 | 35 |
 
-## Research
+AI on its own is fast but unreliable: low groundedness, weak tradecraft compliance. Human-only is accurate but slow. The combined condition hits the highest tradecraft compliance and product usefulness scores while cutting production time by 63% against human-only.
 
-This prototype accompanies the following research:
+![Seven-metric evaluation table comparing AI-only, human-only, and human+AI conditions](docs/images/evaluationframework.png)
 
-> **A Reference Model for AI-Enabled Cyber Threat Intelligence Reporting**
-> Adarsh Rai
-> Carnegie Mellon University, Heinz College of Information Systems and Public Policy
-> Master of Science in Information Security Policy and Management (MSISPM), 2026
+## Key Files
 
-The paper proposes a reporting-centered reference architecture for AI-enabled CTI based on a systematic literature review of 54 papers mapped against the SEI Cyber Intelligence Framework. It identifies that strategic analysis, reporting and feedback, and human-machine teaming receive substantially less AI coverage than data gathering and threat analysis, and proposes an architecture that addresses these gaps.
+| File | Purpose |
+|---|---|
+| `src/lib/pipeline-context.tsx` | React context holding the pipeline state machine |
+| `src/lib/llm.ts` | OpenRouter gateway, system prompt, JSON extractor |
+| `src/lib/demo-data.ts` | Cached demo scenario data |
+| `src/lib/cached-reports.ts` | Pre-generated reports for demo mode |
+| `src/app/api/generate/route.ts` | Report generation with section guides and feedback injection |
+| `src/app/api/enrich/route.ts` | ATT&CK mapping and structured enrichment |
+| `src/app/review/page.tsx` | Analyst review with chat editing, edit tracking, approval |
 
-### Research Contributions
+## Known Limitations
 
-1. Architecture treating intelligence product generation as a primary design target
-2. Organizational context layer enabling triage based on sector, assets, and regulatory requirements
-3. Three intelligence product classes generated from the same evidence base
-4. Human-machine teaming workflow with explicit task allocation and feedback capture
-5. Evaluation framework comparing AI-only, human-only, and human+AI conditions
+This is a thesis prototype, not production software.
 
----
-
-## Project Structure
-
-```
-argus-cti/
-├── src/
-│   ├── app/
-│   │   ├── api/           # API routes (generate, enrich, edit)
-│   │   ├── context/       # Stage 01: Org context questionnaire
-│   │   ├── ingest/        # Stage 02: Data ingestion
-│   │   ├── enrich/        # Stage 03: Enrichment
-│   │   ├── generate/      # Stage 04: Report generation
-│   │   ├── review/        # Stage 05: Analyst review
-│   │   ├── feedback/      # Stage 06: Feedback & cycle closure
-│   │   ├── layout.tsx     # Root layout with sidebar
-│   │   └── page.tsx       # Dashboard
-│   ├── components/        # Reusable UI components
-│   ├── context/           # React context (pipeline state)
-│   └── lib/               # Utilities, prompts, demo data, types
-├── public/                # Static assets
-├── .env.local             # Environment variables (not committed)
-├── .gitignore
-├── next.config.js
-├── tailwind.config.ts
-├── tsconfig.json
-└── package.json
-```
-
----
+- PDF upload parsing is stubbed. Paste extracted text into the search query instead.
+- Asset inventory is fixed at 10 records regardless of org profile.
+- No streaming. Every LLM call blocks until OpenRouter returns.
+- No authentication. The deployed instance is publicly reachable.
+- No tests.
+- 2500-token output cap on `/api/generate` causes truncation on longer reports.
+- Dashboard stats (1,284 threats, 8m 42s, etc.) are decorative, not live metrics.
+- Threat feed integrations (CISA KEV, AlienVault OTX, MISP, NVD, VirusTotal) are simulated via static data.
 
 ## Security Considerations
 
-- API keys are stored as environment variables and never exposed to the client. All LLM calls are made server-side via Next.js API routes.
-- The application does not persist user data. All pipeline state is held in browser memory and cleared on page reload.
+- API keys live in environment variables and never reach the client. All LLM calls go through Next.js API routes server-side.
+- Pipeline state is held in browser memory and cleared on page reload. The application persists nothing.
 - File uploads are processed server-side and not stored permanently.
-- The external sharing report template includes automatic anonymization of organizational identifiers.
-- This is a research prototype. It is not intended for production deployment with real organizational data without additional hardening (authentication, RBAC, audit logging, encryption at rest).
+- The external sharing template strips organizational identifiers before rendering.
 
----
+## Research
+
+**Thesis.** "A Reference Model for AI-Enabled Cyber Threat Intelligence Reporting"
+
+**Author.** Adarsh Rai, Carnegie Mellon University, Heinz College, MS Information Security & Policy Management (MSISPM), 2026
+
+**Advisor.** Dr. Thomas P. Scanlon, Senior Research Scientist, CERT Division, Software Engineering Institute
+
+**Method.** Systematic literature review of 54 papers mapped to the SEI Cyber Intelligence Framework (Mundie et al., 2019).
+
+**Standards.** ICD 203, NIST SP 800-150, FIRST TLP v2.0, STIX/TAXII, MISP best practices.
+
+Links:
+- [Research Paper (PDF)](https://drive.google.com/file/d/15vLA_pAFm88RTSFJSCMEhoTcF9wtPT9S/view?usp=sharing)
+- [Thesis Defense Recording (YouTube)](https://youtu.be/NFk96HkcDRo?si=ZUPRY0ci3hTs2dt0)
 
 ## License
 
 This project is part of academic research at Carnegie Mellon University. All rights reserved.
 
----
-
 ## Acknowledgments
 
-- Dr. Thomas.P. Scanlon — Thesis Advisor, Carnegie Mellon University
-- SEI Cyber Intelligence Tradecraft Report (2019) — Framework foundation
-- MITRE ATT&CK® — Technique taxonomy
+- Dr. Thomas P. Scanlon — Thesis advisor, CERT Division, Software Engineering Institute
+- SEI Cyber Intelligence Tradecraft Report (Mundie et al., 2019) — Framework foundation
+- MITRE ATT&CK&reg; — Technique taxonomy
 - OpenRouter — Multi-model LLM routing
 
 ---
 
-<div align="center">
-
-**Built by [Adarsh Rai](https://adarsh-rai.com) · Carnegie Mellon University · Heinz College · 2026**
-
-</div>
+Built by [Adarsh Rai](https://adarsh-rai.com) · Carnegie Mellon University · Heinz College · 2026
